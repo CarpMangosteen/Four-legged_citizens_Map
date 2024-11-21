@@ -1,51 +1,73 @@
-from flask import Flask, render_template, jsonify, request
-import os
-from dotenv import load_dotenv
-from config import Config
+from flask import Flask, request, jsonify, render_template
+from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
-app.config.from_object(Config)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///markers.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
 
-@app.route("/get_keys", methods=["GET"])
-def get_keys():
-    return jsonify({
-        "AMap_API_KEY": app.config["AMap_API_KEY"],
-        "AMap_SECURITY_KEY": app.config["AMap_SECURITY_KEY"]
-    })
+# 数据库模型
+class Marker(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    latitude = db.Column(db.Float, nullable=False)
+    longitude = db.Column(db.Float, nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    image_url = db.Column(db.String(200), nullable=True)
 
-# 模拟数据库：标记信息
-markers = [
-    {"id": 1, "position": [116.397428, 39.90923], "image": "//a.amap.com/jsapi_demos/static/demo-center/icons/dir-via-marker.png"},
-]
+# 根路径，返回地图前端页面
+@app.route('/')
+def home():
+    return render_template('index.html')  # 渲染位于 templates/index.html 的前端文件
 
-# 首页路由
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-# 获取标记数据的 API
-@app.route("/get_markers", methods=["GET"])
+# 获取所有点标记
+@app.route('/markers', methods=['GET'])
 def get_markers():
-    return jsonify({"markers": markers})
+    markers = Marker.query.all()  # 从数据库获取所有点标记
+    return jsonify([{
+        'id': m.id,
+        'latitude': m.latitude,
+        'longitude': m.longitude,
+        'title': m.title,
+        'description': m.description,
+        'image_url': m.image_url
+    } for m in markers])
 
-# 添加新标记的 API
-@app.route("/add_marker", methods=["POST"])
+# 添加点标记
+@app.route('/markers', methods=['POST'])
 def add_marker():
     data = request.json
-    new_marker = {
-        "id": len(markers) + 1,
-        "position": data["position"],
-        "image": data["image"],
-    }
-    markers.append(new_marker)
-    return jsonify({"success": True, "marker": new_marker})
+    new_marker = Marker(
+        latitude=data['latitude'],
+        longitude=data['longitude'],
+        title=data['title'],
+        description=data.get('description'),
+        image_url=data.get('image_url')
+    )
+    db.session.add(new_marker)
+    db.session.commit()
+    return jsonify({'message': 'Marker added successfully'}), 201
 
-# 删除标记的 API
-@app.route("/delete_marker/<int:marker_id>", methods=["DELETE"])
-def delete_marker(marker_id):
-    global markers
-    markers = [m for m in markers if m["id"] != marker_id]
-    return jsonify({"success": True})
+# 删除点标记
+@app.route('/markers/<int:id>', methods=['DELETE'])
+def delete_marker(id):
+    marker = Marker.query.get_or_404(id)
+    db.session.delete(marker)
+    db.session.commit()
+    return jsonify({'message': 'Marker deleted successfully'})
 
-if __name__ == "__main__":
+# 更新点标记
+@app.route('/markers/<int:id>', methods=['PUT'])
+def update_marker(id):
+    marker = Marker.query.get_or_404(id)
+    data = request.json
+    marker.title = data.get('title', marker.title)
+    marker.description = data.get('description', marker.description)
+    marker.image_url = data.get('image_url', marker.image_url)
+    db.session.commit()
+    return jsonify({'message': 'Marker updated successfully'})
+
+if __name__ == '__main__':
+    with app.app_context():
+        db.create_all()
     app.run(debug=True)

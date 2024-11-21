@@ -1,133 +1,245 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta
-      name="viewport"
-      content="initial-scale=1.0, user-scalable=no, width=device-width"
-    />
-    <title>地图标记示例</title>
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no, width=device-width">
+    <title>交互地图</title>
+    <link rel="stylesheet" href="https://a.amap.com/jsapi_demos/static/demo-center/css/demo-center.css" />
     <style>
-      html, body, #container { width: 100%; height: 100%; margin: 0; padding: 0; }
-      .custom-content-marker { position: relative; width: 25px; height: 34px; }
-      .custom-content-marker img { width: 100%; height: 100%; }
-      .custom-content-marker .close-btn {
-        position: absolute; top: -6px; right: -8px; width: 15px; height: 15px;
-        font-size: 12px; background: #ccc; border-radius: 50%; color: #fff;
-        text-align: center; line-height: 15px; box-shadow: -1px 1px 1px rgba(10, 10, 10, .2);
+      html, body, #container {
+          height: 100%;
+          width: 100%;
+          margin: 0;
       }
-      .custom-content-marker .close-btn:hover { background: #666; }
-      /* 表单样式 */
-      #form {
-        margin: 20px;
-        padding: 10px;
-        background-color: #f4f4f4;
+      .info-window {
+          width: 200px;
+          padding: 5px;
       }
-      #form input {
-        margin: 5px 0;
-        padding: 8px;
-        width: 200px;
+      .info {
+          position: absolute;
+          top: 10px;
+          left: 10px;
+          background: white;
+          padding: 10px;
+          z-index: 999;
       }
     </style>
-    <title>HELLO, AMAP!</title>
-    <style>
-      html,
-      body,
-      #container {
-        width: 100%;
-        height: 100%;
-      }
-    </style>
-    <!-- 配置安全密钥 -->
-    <script type="text/javascript">
-      window._AMapSecurityConfig = {
-        securityJsCode: "338ac5cccabe0e9873dcd449ba73532e", // 替换为您申请的安全密钥
-      };
-    </script>
-    <!-- 加载高德地图 JS API -->
-    <script src="https://webapi.amap.com/loader.js"></script>
-  </head>
-  <body>
-    <!-- 地图容器 -->
+</head>
+<body>
     <div id="container"></div>
-
-    <!-- 表单部分 -->
-    <div id="form">
-        <label>经纬度 (lng, lat): </label>
-        <input id="lng" type="text" placeholder="经度" />
-        <input id="lat" type="text" placeholder="纬度" />
-        <br />
-        <label>图片 URL: </label>
-        <input id="image" type="text" placeholder="图片链接" />
-        <br />
-        <button onclick="addMarker()">添加标记</button>
-    </div>
-    
-    <!-- 加载地图并初始化 -->
     <script type="text/javascript">
-      AMapLoader.load({
-        key: "4f1a02778d43d4e88c5ed32aaad3f243", // 替换为您的应用key
-        version: "2.0", // 加载 API 的版本
-      })
-        .then((AMap) => {
-            // JS API 加载完成后，初始化地图
-            const map = new AMap.Map("container", {
-                viewMode: '2D', //默认使用 2D 模式
-                center: [121.40590300000008, 31.226988000000016], // 设置地图中心点为北京
-                zoom: 15, // 设置地图缩放级别
-                mapStyle: "amap://styles/normal", //设置地图的显示样式
-            });
-            // 从 Flask 后端获取标记数据
-            fetch("/get_markers")
-            .then(response => response.json())
-            .then(data => {
-                data.markers.forEach(markerData => {
-                const markerContent = `
-                    <div class="custom-content-marker">
-                    <img src="${markerData.image}" />
-                    <div class="close-btn" onclick="clearMarker(${markerData.id})">X</div>
-                    </div>`;
-                const marker = new AMap.Marker({
-                    position: markerData.position,
-                    content: markerContent,
-                    offset: new AMap.Pixel(-13, -30),
-                });
-                map.add(marker);
-                });
-            });
-
-            // 删除标记的函数
-            window.clearMarker = function(id) {
-            fetch(`/delete_marker/${id}`, { method: "DELETE" })
-                .then(() => {
-                alert("标记已删除！");
-                window.location.reload(); // 刷新页面
-                });
-            };
-            // 添加标记的函数
-            window.addMarker = function addMarker() {
-            const lng = document.getElementById("lng").value;
-            const lat = document.getElementById("lat").value;
-            const image = document.getElementById("image").value;
-        
-            fetch("/add_marker", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ position: [parseFloat(lng), parseFloat(lat)], image }),
-            })
-                .then(response => response.json())
-                .then(data => {
-                if (data.success) {
-                    alert("标记已添加！");
-                    window.location.reload(); // 刷新页面以更新标记
-                }
-                });
-            }
-        })
-        .catch((e) => {
-          console.error(e); // 错误提示
-        });
+        // 高德地图安全设置
+        window._AMapSecurityConfig = {
+            securityJsCode: "338ac5cccabe0e9873dcd449ba73532e", // 替换为你的安全码
+        };
     </script>
-  </body>
+    <script src="https://webapi.amap.com/loader.js"></script>
+    <script type="text/javascript">
+        let map; // 全局变量，用于存储地图对象
+
+        // 初始化地图
+        function initializeMap() {
+          AMapLoader.load({
+              key: "4f1a02778d43d4e88c5ed32aaad3f243", // 替换为你的 API key
+              version: "2.0",
+          })
+              .then((AMap) => {
+                  map = new AMap.Map("container", {
+                      zoom: 15,
+                      center: [121.437458, 31.241151], // 设置中心点
+                      mapStyle: "amap://styles/normal",
+                      viewMode: "2D",
+                  });
+
+
+                  // 绑定地图点击事件
+                  map.on("click", (e) => {
+                      handleMapClick(e.lnglat); // 点击地图触发标记窗口
+                  });
+
+                  // 初始化加载点标记
+                  loadMarkers();
+              })
+              .catch((e) => {
+                  console.error("AMapLoader.load error:", e);
+              });
+      }
+
+
+        // 处理标记点击事件
+        function handleMarkerClick(marker) {
+            const infoWindowContent = `
+                <div class="info-window">
+                    <h4>${marker.title}</h4>
+                    <p>${marker.description}</p>
+                    <button onclick="editMarker(${marker.id})">编辑</button>
+                    <button onclick="deleteMarker(${marker.id})">删除</button>
+                </div>
+            `;
+            const infoWindow = new AMap.InfoWindow({
+                content: infoWindowContent,
+                offset: new AMap.Pixel(0, -20),
+            });
+            infoWindow.open(map, [marker.longitude, marker.latitude]);
+        }
+        
+        // 编辑标记
+        function editMarker(id) {
+            const infoWindowContent = `
+                <div class="info-window">
+                    <label>标题:</label><br>
+                    <input id="edit-title" type="text"><br>
+                    <label>备注:</label><br>
+                    <textarea id="edit-description"></textarea><br>
+                    <label>图片URL:</label><br>
+                    <input id="edit-image_url" type="text"><br>
+                    <button onclick="submitEditMarker(${id})">保存</button>
+                </div>
+            `;
+            const infoWindow = new AMap.InfoWindow({
+                content: infoWindowContent,
+                offset: new AMap.Pixel(0, -20),
+            });
+            infoWindow.open(map, map.getCenter()); // 在地图中心显示表单
+        }
+
+        // 提交编辑的标记
+        async function submitEditMarker(id) {
+            const title = document.getElementById("edit-title").value;
+            const description = document.getElementById("edit-description").value;
+            const image_url = document.getElementById("edit-image_url").value;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/markers/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        title: title,
+                        description: description,
+                        image_url: image_url,
+                    }),
+                });
+
+                if (response.ok) {
+                    alert("点标记已更新");
+                    map.clearMap(); // 清空地图
+                    loadMarkers(); // 重新加载标记
+                } else {
+                    alert("更新失败");
+                }
+            } catch (error) {
+                console.error("Failed to update marker:", error);
+            }
+        }
+
+
+        // 删除标记
+        async function deleteMarker(id) {
+            if (!confirm("确定要删除这个点标记吗？")) return;
+
+            try {
+                const response = await fetch(`http://127.0.0.1:5000/markers/${id}`, {
+                    method: "DELETE",
+                });
+
+                if (response.ok) {
+                    alert("点标记已删除");
+                    map.clearMap(); // 清空地图
+                    loadMarkers(); // 重新加载标记
+                } else {
+                    alert("删除失败");
+                }
+            } catch (error) {
+                console.error("Failed to delete marker:", error);
+            }
+        }
+
+
+        // 地图点击事件处理函数
+        function handleMapClick(lnglat) {
+            const infoWindowContent = `
+                <div class="info-window">
+                    <label>标题:</label><br>
+                    <input id="title" type="text"><br>
+                    <label>备注:</label><br>
+                    <textarea id="description"></textarea><br>
+                    <label>图片URL:</label><br>
+                    <input id="image_url" type="text" placeholder="输入自定义图标URL"><br>
+                    <button onclick="submitMarker(${lnglat.lng}, ${lnglat.lat})">提交</button>
+                </div>
+            `;
+            const infoWindow = new AMap.InfoWindow({
+                content: infoWindowContent,
+                offset: new AMap.Pixel(0, -20),
+            });
+            infoWindow.open(map, lnglat);
+        }
+
+        // 加载所有点标记
+        async function loadMarkers() {
+          try {
+              const response = await fetch("http://127.0.0.1:5000/markers");
+              const markers = await response.json();
+              markers.forEach((marker) => {
+                  // 创建自定义图标
+                  const icon = new AMap.Icon({
+                      size: new AMap.Size(25, 34), // 图标大小
+                      image: marker.image_url || '//a.amap.com/jsapi_demos/static/demo-center/icons/dir-marker.png', // 默认图标
+                      imageSize: new AMap.Size(135, 40), // 图片大小
+                  });
+
+                  // 创建标记
+                  const mapMarker = new AMap.Marker({
+                      position: [marker.longitude, marker.latitude],
+                      icon: icon,
+                      offset: new AMap.Pixel(-13, -30),
+                      map: map,
+                  });
+
+                  // 添加点击事件
+                  mapMarker.on("click", () => {
+                      handleMarkerClick(marker);
+                  });
+              });
+          } catch (error) {
+              console.error("Failed to load markers:", error);
+          }
+      }
+
+        // 提交点标记到后端
+        async function submitMarker(lng, lat) {
+            const title = document.getElementById("title").value;
+            const description = document.getElementById("description").value;
+            const image_url = document.getElementById("image_url").value;
+
+            try {
+                const response = await fetch("http://127.0.0.1:5000/markers", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        latitude: lat,
+                        longitude: lng,
+                        title: title,
+                        description: description,
+                        image_url: image_url,
+                    }),
+                });
+
+                if (response.ok) {
+                    alert("点标记已添加");
+                    map.clearMap(); // 清除地图上的标记
+                    loadMarkers(); // 重新加载标记
+                } else {
+                    alert("添加失败");
+                }
+            } catch (error) {
+                console.error("Failed to submit marker:", error);
+            }
+        }
+
+        // 初始化地图
+        initializeMap();
+    </script>
+</body>
 </html>
