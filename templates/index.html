@@ -52,6 +52,8 @@
                       viewMode: "2D",
                   });
 
+                  // 初始加载时启用限制范围
+                  lockMapBounds();
 
                   // 绑定地图点击事件
                   map.on("click", (e) => {
@@ -66,6 +68,34 @@
               });
       }
 
+
+        // 限制地图显示范围
+        function lockMapBounds() {
+            const bounds = new AMap.Bounds(
+                [121.423841 - 0.00001, 31.228055 - 0.00001], // 西南角坐标，扩大范围
+                [121.451074 + 0.00001, 31.254247 + 0.00001]  // 东北角坐标，扩大范围
+            );
+            map.setLimitBounds(bounds); // 设置显示范围限制
+        }
+
+
+        // 取消地图显示限制
+        function unlockMapBounds() {
+            map.clearLimitBounds(); // 清除限制
+            document.querySelector("#ne").innerText = "未限定";
+            document.querySelector("#sw").innerText = "未限定";
+        }
+
+        // 更新限制范围显示信息
+        function logMapInfo(bounds) {
+            if (bounds) {
+                document.querySelector("#ne").innerText = bounds.northEast.toString();
+                document.querySelector("#sw").innerText = bounds.southWest.toString();
+            } else {
+                document.querySelector("#ne").innerText = "未限定";
+                document.querySelector("#sw").innerText = "未限定";
+            }
+        }
 
         // 处理标记点击事件
         function handleMarkerClick(marker) {
