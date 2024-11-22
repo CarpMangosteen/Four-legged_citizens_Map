@@ -42,7 +42,7 @@
         async function initializeMap() {
             try {
                 // 从后端获取 API 配置
-                const response = await fetch("http://127.0.0.1:5000/api/map-config");
+                const response = await fetch("http://47.100.0.97:5000/api/map-config");
                 const mapConfig = await response.json();
 
                 // 加载高德地图 JS API
@@ -157,7 +157,7 @@
             const image_url = document.getElementById("edit-image_url").value;
 
             try {
-                const response = await fetch(`http://127.0.0.1:5000/markers/${id}`, {
+                const response = await fetch(`http://47.100.0.97:5000/markers/${id}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -185,7 +185,7 @@
             if (!confirm("确定要删除这个点标记吗？")) return;
 
             try {
-                const response = await fetch(`http://127.0.0.1:5000/markers/${id}`, {
+                const response = await fetch(`http://47.100.0.97:5000/markers/${id}`, {
                     method: "DELETE",
                 });
 
@@ -225,12 +225,12 @@
         // 加载所有点标记
         async function loadMarkers() {
           try {
-              const response = await fetch("http://127.0.0.1:5000/markers");
+              const response = await fetch("http://47.100.0.97:5000/markers");
               const markers = await response.json();
               markers.forEach((marker) => {
                   // 创建自定义图标
                   const icon = new AMap.Icon({
-                      size: new AMap.Size(25, 34), // 图标大小
+                      size: new AMap.Size(34, 34), // 图标大小
                       image: marker.image_url || '//a.amap.com/jsapi_demos/static/demo-center/icons/dir-marker.png', // 默认图标
                       imageSize: new AMap.Size(135, 40), // 图片大小
                   });
@@ -260,7 +260,7 @@
             const image_url = document.getElementById("image_url").value;
 
             try {
-                const response = await fetch("http://127.0.0.1:5000/markers", {
+                const response = await fetch("http://47.100.0.97:5000/markers", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
