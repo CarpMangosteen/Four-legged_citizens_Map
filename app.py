@@ -24,8 +24,8 @@ def home():
 @app.route('/api/map-config', methods=['GET'])
 def get_map_config():
     return jsonify({
-        "key": config.GAODE_API_KEY,  # 从配置文件读取 API Key
-        "securityJsCode": config.GAODE_SECURITY_CODE  # 从配置文件读取安全代码
+        "key": config.AMap_API_KEY,  # 从配置文件读取 API Key
+        "securityJsCode": config.AMap_SECURITY_CODE  # 从配置文件读取安全代码
     })
 
 # 获取所有点标记
