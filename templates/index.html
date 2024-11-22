@@ -39,34 +39,50 @@
         let map; // 全局变量，用于存储地图对象
 
         // 初始化地图
-        function initializeMap() {
-          AMapLoader.load({
-              key: "4f1a02778d43d4e88c5ed32aaad3f243", // 替换为你的 API key
-              version: "2.0",
-          })
-              .then((AMap) => {
-                  map = new AMap.Map("container", {
-                      zoom: 15,
-                      center: [121.437458, 31.241151], // 设置中心点
-                      mapStyle: "amap://styles/normal",
-                      viewMode: "2D",
-                  });
+        async function initializeMap() {
+            try {
+                // 从后端获取 API 配置
+                const response = await fetch("http://127.0.0.1:5000/api/map-config");
+                const mapConfig = await response.json();
 
-                  // 初始加载时启用限制范围
-                  lockMapBounds();
+                // 加载高德地图 JS API
+                window._AMapSecurityConfig = {
+                    securityJsCode: mapConfig.securityJsCode, // 动态设置安全代码
+                };
 
-                  // 绑定地图点击事件
-                  map.on("click", (e) => {
-                      handleMapClick(e.lnglat); // 点击地图触发标记窗口
-                  });
+                await AMapLoader.load({
+                    key: mapConfig.key, // 动态设置 API Key
+                    version: "2.0",
+                })
+                    .then((AMap) => {
+                        // 初始化地图
+                        map = new AMap.Map("container", {
+                            zoom: 15,
+                            center: [121.437458, 31.241151], // 设置中心点
+                            mapStyle: "amap://styles/normal",
+                            viewMode: "2D",
+                        });
 
-                  // 初始化加载点标记
-                  loadMarkers();
-              })
-              .catch((e) => {
-                  console.error("AMapLoader.load error:", e);
-              });
-      }
+                        // 初始加载时启用限制范围
+                        lockMapBounds();
+
+                        // 绑定地图点击事件
+                        map.on("click", (e) => {
+                            handleMapClick(e.lnglat); // 点击地图触发标记窗口
+                        });
+
+                        // 初始化加载点标记
+                        loadMarkers();
+                    })
+                    .catch((e) => {
+                        console.error("AMapLoader.load error:", e);
+                    });
+            } catch (error) {
+                console.error("Failed to fetch map config:", error);
+            }
+        }
+
+
 
 
         // 限制地图显示范围

@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
+import config
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///markers.db'
@@ -19,6 +20,13 @@ class Marker(db.Model):
 @app.route('/')
 def home():
     return render_template('index.html')  # 渲染位于 templates/index.html 的前端文件
+
+@app.route('/api/map-config', methods=['GET'])
+def get_map_config():
+    return jsonify({
+        "key": config.GAODE_API_KEY,  # 从配置文件读取 API Key
+        "securityJsCode": config.GAODE_SECURITY_CODE  # 从配置文件读取安全代码
+    })
 
 # 获取所有点标记
 @app.route('/markers', methods=['GET'])
