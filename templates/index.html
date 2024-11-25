@@ -30,13 +30,18 @@
     <div id="container"></div>
     <script src="https://webapi.amap.com/loader.js"></script>
     <script type="text/javascript">
+        
+        const baseURL = window.location.hostname === '47.100.0.97' 
+            ? 'http://47.100.0.97:5001'  // 生产环境
+            : 'http://127.0.0.1:5001';  // 开发环境
+        
         let map; // 全局变量，用于存储地图对象
 
         // 初始化地图
         async function initializeMap() {
             try {
                 // 从后端获取 API 配置
-                const response = await fetch("http://47.100.0.97:5001/api/map-config");
+                const response = await fetch(`${baseURL}/api/map-config`);
                 const mapConfig = await response.json();
 
                 // 加载高德地图 JS API
@@ -151,7 +156,7 @@
             const image_url = document.getElementById("edit-image_url").value;
 
             try {
-                const response = await fetch(`http://47.100.0.97:5001/markers/${id}`, {
+                const response = await fetch(`${baseURL}/markers/${id}`, {
                     method: "PUT",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -179,7 +184,7 @@
             if (!confirm("确定要删除这个点标记吗？")) return;
 
             try {
-                const response = await fetch(`http://47.100.0.97:5001/markers/${id}`, {
+                const response = await fetch(`${baseURL}/markers/${id}`, {
                     method: "DELETE",
                 });
 
@@ -219,7 +224,7 @@
         // 加载所有点标记
         async function loadMarkers() {
           try {
-              const response = await fetch("http://47.100.0.97:5001/markers");
+              const response = await fetch(`${baseURL}/markers`);
               const markers = await response.json();
               markers.forEach((marker) => {
                   // 创建自定义图标
@@ -254,7 +259,7 @@
             const image_url = document.getElementById("image_url").value;
 
             try {
-                const response = await fetch("http://47.100.0.97:5001/markers", {
+                const response = await fetch(`${baseURL}/markers`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({

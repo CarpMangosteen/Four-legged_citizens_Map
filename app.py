@@ -1,14 +1,18 @@
 from flask import Flask, request, jsonify, render_template
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
-import instance.config as config
+from instance.config import get_config
 
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///markers.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# 加载配置
+config = get_config()
+app.config.from_object(config)
+
 db = SQLAlchemy(app)
 
-CORS(app) 
+if app.config['CORS_ENABLED']:
+    CORS(app)
 
 # 数据库模型
 class Marker(db.Model):
@@ -19,22 +23,22 @@ class Marker(db.Model):
     description = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(200), nullable=True)
 
-# 根路径，返回地图前端页面
+# 根路径
 @app.route('/')
 def home():
-    return render_template('index.html')  # 渲染位于 templates/index.html 的前端文件
+    return render_template('index.html')
 
 @app.route('/api/map-config', methods=['GET'])
+@app.route('/api/map-config/', methods=['GET'])
 def get_map_config():
     return jsonify({
-        "key": config.AMap_API_KEY,  # 从配置文件读取 API Key
-        "securityJsCode": config.AMap_SECURITY_CODE  # 从配置文件读取安全代码
+        "key": config.AMAP_API_KEY,
+        "securityJsCode": config.AMAP_SECURITY_CODE
     })
 
-# 获取所有点标记
 @app.route('/markers', methods=['GET'])
 def get_markers():
-    markers = Marker.query.all()  # 从数据库获取所有点标记
+    markers = Marker.query.all()
     return jsonify([{
         'id': m.id,
         'latitude': m.latitude,
@@ -44,7 +48,6 @@ def get_markers():
         'image_url': m.image_url
     } for m in markers])
 
-# 添加点标记
 @app.route('/markers', methods=['POST'])
 def add_marker():
     data = request.json
@@ -59,7 +62,6 @@ def add_marker():
     db.session.commit()
     return jsonify({'message': 'Marker added successfully'}), 201
 
-# 删除点标记
 @app.route('/markers/<int:id>', methods=['DELETE'])
 def delete_marker(id):
     marker = Marker.query.get_or_404(id)
@@ -67,7 +69,6 @@ def delete_marker(id):
     db.session.commit()
     return jsonify({'message': 'Marker deleted successfully'})
 
-# 更新点标记
 @app.route('/markers/<int:id>', methods=['PUT'])
 def update_marker(id):
     marker = Marker.query.get_or_404(id)
@@ -81,5 +82,4 @@ def update_marker(id):
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
-    app.run(host='0.0.0.0', port=5001,debug=True)
-
+    app.run(host=config.HOST, port=config.PORT, debug=config.DEBUG)
