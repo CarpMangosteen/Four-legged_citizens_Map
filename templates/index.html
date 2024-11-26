@@ -209,8 +209,8 @@
                     <input id="title" type="text"><br>
                     <label>备注:</label><br>
                     <textarea id="description"></textarea><br>
-                    <label>图片URL:</label><br>
-                    <input id="image_url" type="text" placeholder="输入自定义图标URL"><br>
+                    <label>图片:</label><br>
+                    <input id="image" type="file"><br>
                     <button onclick="submitMarker(${lnglat.lng}, ${lnglat.lat})">提交</button>
                 </div>
             `;
@@ -231,7 +231,7 @@
                   const icon = new AMap.Icon({
                       size: new AMap.Size(34, 34), // 图标大小
                       image: marker.image_url || '//a.amap.com/jsapi_demos/static/demo-center/icons/dir-marker.png', // 默认图标
-                      imageSize: new AMap.Size(135, 40), // 图片大小
+                      imageSize: new AMap.Size(40, 40), // 图片大小
                   });
 
                   // 创建标记
@@ -252,35 +252,38 @@
           }
       }
 
+            try {
+                });
+            } catch (error) {
+            }
+        }
+
         // 提交点标记到后端
         async function submitMarker(lng, lat) {
-            const title = document.getElementById("title").value;
-            const description = document.getElementById("description").value;
-            const image_url = document.getElementById("image_url").value;
+            const title = document.getElementById('title').value;
+            const description = document.getElementById('description').value;
+            const image = document.getElementById('image').files[0];
 
-            try {
-                const response = await fetch(`${baseURL}/markers`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        latitude: lat,
-                        longitude: lng,
-                        title: title,
-                        description: description,
-                        image_url: image_url,
-                    }),
-                });
+            const formData = new FormData();
+            formData.append('latitude', lat);
+            formData.append('longitude', lng);
+            formData.append('title', title);
+            formData.append('description', description);
+            formData.append('image', image);
 
-                if (response.ok) {
-                    alert("点标记已添加");
-                    map.clearMap(); // 清除地图上的标记
-                    loadMarkers(); // 重新加载标记
-                } else {
-                    alert("添加失败");
-                }
-            } catch (error) {
-                console.error("Failed to submit marker:", error);
-            }
+            fetch('/markers', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert(data.message);
+                map.clearMap();
+                loadMarkers();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
         }
 
         // 初始化地图

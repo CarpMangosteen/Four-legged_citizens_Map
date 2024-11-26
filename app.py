@@ -1,9 +1,16 @@
-from flask import Flask, request, jsonify, render_template
+import os
+from werkzeug.utils import secure_filename
+from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
 from flask_cors import CORS
 from instance.config import get_config
 
 app = Flask(__name__)
+
+# 配置上传文件夹
+UPLOAD_FOLDER = 'uploads'
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # 加载配置
 config = get_config()
@@ -50,13 +57,22 @@ def get_markers():
 
 @app.route('/markers', methods=['POST'])
 def add_marker():
-    data = request.json
+    data = request.form
+    image = request.files.get('image')
+    image_url = None
+
+    if image:
+        filename = secure_filename(image.filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        image.save(image_path)
+        image_url = f'/uploads/{filename}'
+
     new_marker = Marker(
         latitude=data['latitude'],
         longitude=data['longitude'],
         title=data['title'],
         description=data.get('description'),
-        image_url=data.get('image_url')
+        image_url=image_url
     )
     db.session.add(new_marker)
     db.session.commit()
@@ -78,6 +94,10 @@ def update_marker(id):
     marker.image_url = data.get('image_url', marker.image_url)
     db.session.commit()
     return jsonify({'message': 'Marker updated successfully'})
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
 
 if __name__ == '__main__':
     with app.app_context():
