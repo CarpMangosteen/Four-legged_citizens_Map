@@ -28,10 +28,10 @@
 </head>
 <body>
     <div id="container"></div>
-    <div class="input-card" style="width: 200px">
+    <!-- <div class="input-card" style="width: 200px">
         <h4 style="margin-bottom: 10px; font-weight: 600">利用mouseTool绘制覆盖物</h4>
         <button class="btn" onclick="drawPolygon()" style="margin-bottom: 5px">绘制多边形</button>
-     </div>
+    </div> -->
     <script src="https://webapi.amap.com/loader.js"></script>
     <script type="text/javascript">
         
@@ -70,7 +70,7 @@
                         mouseTool = new AMap.MouseTool(map); // 在地图中添加鼠标工具插件
 
                         // 初始加载时启用限制范围
-                        lockMapBounds();
+                        // lockMapBounds();
 
                         // 绑定地图点击事件
                         // map.on("click", (e) => {
@@ -95,8 +95,8 @@
         // 限制地图显示范围
         function lockMapBounds() {
             const bounds = new AMap.Bounds(
-                [121.42392808680836, 31.227746411150694], // 西南角坐标，扩大范围
-                [121.45114726315126, 31.254768200231094]  // 东北角坐标，扩大范围
+                [121.423841 - 0.00001, 31.228055 - 0.00001], // 西南角坐标，扩大范围
+                [121.451074 + 0.00001, 31.254247 + 0.00001]  // 东北角坐标，扩大范围
             );
             map.setLimitBounds(bounds); // 设置显示范围限制
         }
@@ -326,11 +326,12 @@
                             polygonArr.push([polygon.coordinates[i], polygon.coordinates[i + 1]]);
                         }
                         const polygonObj = new AMap.Polygon({
+                            zoom:20,
                             path: polygonArr,
-                            fillColor: '#ccebc5',
+                            fillColor: '#00CDCD',
                             strokeOpacity: 1,
-                            fillOpacity: 0.5,
-                            strokeColor: '#8EE5EE',
+                            fillOpacity: 0.3,
+                            strokeColor: '#8EE5EE', 
                             strokeWeight: 1,
                             strokeStyle: 'dashed',
                             strokeDasharray: [5, 5],
