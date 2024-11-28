@@ -1,4 +1,5 @@
 import os
+import json
 from werkzeug.utils import secure_filename
 from flask import Flask, request, jsonify, render_template, send_from_directory
 from flask_sqlalchemy import SQLAlchemy
@@ -30,6 +31,15 @@ class Marker(db.Model):
     description = db.Column(db.Text, nullable=True)
     image_url = db.Column(db.String(200), nullable=True)
 
+class Polygon(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    coordinates = db.Column(db.Text, nullable=False)  # 存储坐标数组的 JSON 字符串
+    name = db.Column(db.String(100), nullable=False)  # 多边形名称
+    description = db.Column(db.Text, nullable=True)  # 多边形描述
+
+    def to_array(self):
+        return json.loads(self.coordinates.encode('utf-8').decode('utf-8'))
+    
 # 根路径
 @app.route('/')
 def home():
@@ -98,6 +108,56 @@ def update_marker(id):
 @app.route('/uploads/<filename>')
 def uploaded_file(filename):
     return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+
+@app.route('/polygons', methods=['POST'])
+def add_polygon():
+    try:
+        # 清除之前存储的所有 Polygon 数据
+        db.session.query(Polygon).delete()
+        db.session.commit()
+
+        data = request.json
+        coordinates = data['coordinates']
+        name = data['name']
+        description = data.get('description')
+
+        if not isinstance(coordinates, list) or len(coordinates) % 2 != 0:
+            raise ValueError("Invalid coordinates format")
+
+        coordinates_json = json.dumps(coordinates)  # 将坐标数组转换为 JSON 字符串
+
+        new_polygon = Polygon(
+            coordinates=coordinates_json,
+            name=name,
+            description=description
+        )
+        db.session.add(new_polygon)
+        db.session.commit()
+        return jsonify({'message': 'Polygon added successfully'}), 201
+    except KeyError as e:
+        app.logger.error(f"Missing key in request data: {e}")
+        return jsonify({'error': f"Missing key: {e}"}), 400
+    except ValueError as e:
+        app.logger.error(f"Invalid data format: {e}")
+        return jsonify({'error': f"Invalid data format: {e}"}), 400
+    except Exception as e:
+        app.logger.error(f"Error adding polygon: {e}")
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+@app.route('/polygons', methods=['GET'])
+def get_polygons():
+    try:
+        polygons = Polygon.query.all()
+        app.logger.info(f"Fetched {len(polygons)} polygons")
+        return jsonify([{
+            'id': p.id,
+            'coordinates': p.to_array(),
+            'name': p.name,
+            'description': p.description
+        } for p in polygons])
+    except Exception as e:
+        app.logger.error(f"Error fetching polygons: {e}")
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 if __name__ == '__main__':
     with app.app_context():

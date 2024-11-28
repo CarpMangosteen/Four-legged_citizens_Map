@@ -28,6 +28,10 @@
 </head>
 <body>
     <div id="container"></div>
+    <div class="input-card" style="width: 200px">
+        <h4 style="margin-bottom: 10px; font-weight: 600">利用mouseTool绘制覆盖物</h4>
+        <button class="btn" onclick="drawPolygon()" style="margin-bottom: 5px">绘制多边形</button>
+     </div>
     <script src="https://webapi.amap.com/loader.js"></script>
     <script type="text/javascript">
         
@@ -36,6 +40,7 @@
             : 'http://127.0.0.1:5001';  // 开发环境
         
         let map; // 全局变量，用于存储地图对象
+        let mouseTool; // 全局变量，用于存储鼠标工具对象
 
         // 初始化地图
         async function initializeMap() {
@@ -52,6 +57,7 @@
                 await AMapLoader.load({
                     key: mapConfig.key, // 动态设置 API Key
                     version: "2.0",
+                    plugins: ["AMap.MouseTool"],
                 })
                     .then((AMap) => {
                         // 初始化地图
@@ -61,17 +67,19 @@
                             mapStyle: "amap://styles/normal",
                             viewMode: "2D",
                         });
+                        mouseTool = new AMap.MouseTool(map); // 在地图中添加鼠标工具插件
 
                         // 初始加载时启用限制范围
                         lockMapBounds();
 
                         // 绑定地图点击事件
-                        map.on("click", (e) => {
-                            handleMapClick(e.lnglat); // 点击地图触发标记窗口
-                        });
+                        // map.on("click", (e) => {
+                        //     handleMapClick(e.lnglat); // 点击地图触发标记窗口
+                        // });
 
                         // 初始化加载点标记
                         loadMarkers();
+                        loadPolygons();
                     })
                     .catch((e) => {
                         console.error("AMapLoader.load error:", e);
@@ -87,8 +95,8 @@
         // 限制地图显示范围
         function lockMapBounds() {
             const bounds = new AMap.Bounds(
-                [121.423841 - 0.00001, 31.228055 - 0.00001], // 西南角坐标，扩大范围
-                [121.451074 + 0.00001, 31.254247 + 0.00001]  // 东北角坐标，扩大范围
+                [121.42392808680836, 31.227746411150694], // 西南角坐标，扩大范围
+                [121.45114726315126, 31.254768200231094]  // 东北角坐标，扩大范围
             );
             map.setLimitBounds(bounds); // 设置显示范围限制
         }
@@ -221,6 +229,57 @@
             infoWindow.open(map, lnglat);
         }
 
+        function drawPolygon() {
+            mouseTool.polygon({
+                strokeColor: "#F0F0F0", // 线颜色
+                strokeOpacity: 1, 
+                strokeWeight: 3, 
+                strokeOpacity: 0.2,  
+                fillColor: '#8EE5EE',
+                fillOpacity: 0.4,
+                strokeStyle: "dashed",
+                strokeDasharray: [30,10],
+            });
+
+            // 设置 draw 事件监听器
+            mouseTool.on('draw', function(event) {
+                var overlay = event.obj;
+                console.log('覆盖物对象绘制完成', overlay.getPath());
+                let path = overlay.getPath();
+                if (path && path.length > 0) {
+                    let coordinates = [];
+                    path.forEach(point => {
+                        coordinates.push(point.lng, point.lat);
+                    });
+                    console.log(coordinates);
+                    // 发送坐标数组到后端
+                    fetch(`${baseURL}/polygons`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            coordinates: coordinates,
+                            name: 'testofpolygon',
+                            description: 'testofpolygon'
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                        map.clearMap();
+                        loadMarkers();
+                        loadPolygons();
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                } else {
+                    console.error('Invalid path:', path);
+                }
+            });
+        }
+
         // 加载所有点标记
         async function loadMarkers() {
           try {
@@ -252,9 +311,35 @@
           }
       }
 
+        async function loadPolygons() {
             try {
+                const response = await fetch(`${baseURL}/polygons`);
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                const polygons = await response.json();
+                polygons.forEach((polygon) => {
+                    console.log('Polygon data:', polygon); // 添加日志记录
+                    if (polygon.coordinates && Array.isArray(polygon.coordinates) && polygon.coordinates.length > 0) {
+                        const polygonArr = [];
+                        for (let i = 0; i < polygon.coordinates.length; i += 2) {
+                            polygonArr.push([polygon.coordinates[i], polygon.coordinates[i + 1]]);
+                        }
+                        const polygonObj = new AMap.Polygon({
+                            path: polygonArr,
+                            fillColor: '#ccebc5',
+                            strokeOpacity: 1,
+                            fillOpacity: 0.5,
+                            strokeColor: '#8EE5EE',
+                            strokeWeight: 1,
+                            strokeStyle: 'dashed',
+                            strokeDasharray: [5, 5],
+                        });
+                        map.add(polygonObj);
+                    }
                 });
             } catch (error) {
+                console.error("Failed to load polygons:", error);
             }
         }
 
